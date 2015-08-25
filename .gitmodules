@@ -1,0 +1,3 @@
+[submodule "plugin"]
+	path = plugin
+	url = git@github.com:hiroshi-cl/InverseMacros-plugin.git
