@@ -7,4 +7,4 @@ http://2015.gpce.org/
 ## Usage
 
 See below:
-hiroshi-cl.github.io/sbt-repos/
+https://hiroshi-cl.github.io/sbt-repos/
