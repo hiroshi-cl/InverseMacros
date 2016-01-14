@@ -84,7 +84,7 @@ trait ANFTransformers[C <: scala.reflect.macros.blackbox.Context] {
                 }
               } else
                 alwaysExpand(arg, api)
-        receiverList.init ++ argListList.map(_.map(_.init)).flatten.flatten :+
+        receiverList.init ++ argListList.flatMap(_.flatMap(_.init)) :+
           api.typecheck(FineGrainedApply.copy(tree, receiverList.last, method, targs, argListList.map(_.map(_.last))))
       } else
         tree :: Nil
@@ -95,19 +95,19 @@ trait ANFTransformers[C <: scala.reflect.macros.blackbox.Context] {
 
   private[this] lazy val valDef: LTr = {
     case (tree@ValDef(mods, name, tpt, rhs), api) =>
+      setType(rhs, null)
+      setType(rhs, api.typecheck(rhs).tpe)
+      // 変数の型は inverse_macros annotation を持たない
+      setInfo(tree.symbol, removeIMAnnotations(tree.symbol.info))
+
       if (mods.hasFlag(Flag.LAZY) && getIMAnnotations(tpt.tpe).nonEmpty)
         c.abort(c.enclosingPosition, "Sorry! Impure typed lazy is not supported.\n\t" + tpt)
       else if (detectAnnotatedTyped(rhs)) {
-        val init :+ last =
-          api.atOwner(tree.symbol) {
-            anfTransform(rhs, api)
-          }
-        // 変数の型は inverse_macros annotation を持たない
-        if (getIMAnnotations(tree.symbol.info).nonEmpty)
-          setInfo(tree.symbol, removeIMAnnotations(tree.symbol.info))
+        val init :+ last = api.atOwner(tree.symbol)(anfTransform(rhs, api))
+        init.foreach(c.internal.changeOwner(_, tree.symbol, api.currentOwner))
         init :+ treeCopy.ValDef(tree, mods, name, TypeTree(tree.symbol.info), last)
       } else
-        tree :: Nil
+        api.typecheck(tree) :: Nil
   }
 
   private[this] def expand(whole: Tree, sub: Tree, api: TypingTransformApi)(copier: (Tree, RefTree) => Tree) =
@@ -144,7 +144,7 @@ trait ANFTransformers[C <: scala.reflect.macros.blackbox.Context] {
       if (vparams.exists(param => getIMAnnotations(param.tpt.tpe).nonEmpty))
         c.abort(c.enclosingPosition, "Anonymous function parameter type is not inverse_macros annotatable:\n\t" + vparams)
       else
-        treeCopy.Function(tree, vparams, api.recur(body)) :: Nil
+        treeCopy.Function(tree, vparams, api.atOwner(tree.symbol)(api.recur(body))) :: Nil
 
     case (tree@CaseDef(_, _, _), api) =>
       transformCaseDef(tree, api) :: Nil
@@ -243,15 +243,58 @@ trait ANFTransformers[C <: scala.reflect.macros.blackbox.Context] {
       LabelDef(lname, Nil, rhs)
     }
      */
+
+    // なぜか LableDef は owner にはならない
     case (tree@LabelDef(name, params, rhs), api) =>
       if (detectAnnotatedTyped(rhs)) {
-        val newRhs = api.recur(rhs)
-        // TODO: STUB
-
-        if (getIMAnnotations(newRhs.tpe).isEmpty)
-          treeCopy.LabelDef(tree, name, params, newRhs) :: Nil
-        else
-          c.abort(c.enclosingPosition, "Sorry! While (LabelDef) support is incomplete.\n\t" + show(rhs))
+        rhs match {
+          case If(cond, Block(List(body), _), _) =>
+            val stats: List[Tree] = body match {
+              case Block(stats, expr) => stats :+ expr
+              case _ => List(body)
+            }
+            // workaround for avoiding changing owner
+            val dummy = transform(api.typecheck(q"if($cond){..$stats}")) {
+              (t, localApi) =>
+                t match {
+                  case ValDef(mods, name, tpt, rhs) =>
+                    val newSymbol = c.internal.newTermSymbol(NoSymbol, t.symbol.name.asInstanceOf[TermName])
+                    c.internal.setInfo(newSymbol, removeIMAnnotations(t.symbol.info))
+                    c.internal.setInfo(t.symbol, removeIMAnnotations(t.symbol.info))
+                    val newTree = treeCopy.ValDef(t, mods, name, TypeTree(newSymbol.info), api.recur(rhs))
+                    c.internal.setSymbol(newTree, newSymbol)
+                    newTree
+                  case DefDef(mods, name, tparams, vparamss, tpt, rhs) =>
+                    val newTree = treeCopy.DefDef(t, mods, name, tparams, vparamss, tpt, api.recur(rhs))
+                    val newSymbol = c.internal.newTermSymbol(NoSymbol, t.symbol.name.asInstanceOf[TermName])
+                    c.internal.setInfo(newSymbol, t.symbol.info)
+                    c.internal.setSymbol(newTree, newSymbol)
+                    newTree
+                  case Function(vparams, body) =>
+                    val newTree = treeCopy.Function(t, vparams, api.recur(body))
+                    val newSymbol = c.internal.newTermSymbol(NoSymbol, t.symbol.name.asInstanceOf[TermName])
+                    c.internal.setInfo(newSymbol, t.symbol.info)
+                    c.internal.setSymbol(newTree, newSymbol)
+                    newTree
+                  case _ =>
+                    localApi.default(t)
+                }
+            }
+            val tpe = typer(api.recur(dummy), api).tpe
+            c.typecheck(q"${Flag.SYNTHETIC} def ${TermName(c.freshName("trans" + name.toString))} () : $tpe = ???") match {
+              case ddef@DefDef(_, _, _, _, _, _) =>
+                c.internal.setOwner(ddef.symbol, api.currentOwner)
+                c.internal.changeOwner(cond, api.currentOwner, ddef.symbol)
+                stats.foreach(c.internal.changeOwner(_, api.currentOwner, ddef.symbol))
+                val newRhs = api.atOwner(ddef.symbol) {
+                  typer(api.recur(api.typecheck(q"if($cond){..$stats; ${ddef.symbol}}")), api)
+                }
+                treeCopy.DefDef(ddef, ddef.mods, ddef.name, ddef.tparams, ddef.vparamss, ddef.tpt, newRhs) ::
+                  gen.mkMethodCall(ddef.symbol, Nil) :: Nil
+            }
+          case _ =>
+            c.abort(c.enclosingPosition, "not supported type of LabelDef.\n\t" + show(rhs))
+        }
       } else
         tree :: Nil
 

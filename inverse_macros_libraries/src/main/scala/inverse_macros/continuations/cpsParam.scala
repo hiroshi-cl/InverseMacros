@@ -26,8 +26,8 @@ object cpsParam extends IMTransformer {
             val paramRef = gen.mkAttributedRef(param.symbol)
             val newHead = treeCopy.ValDef(head, mods, name, tpt, paramRef)
             val newRhs = api.recur(api.typecheck(q"{$newHead; ..$cont}"))
+            c.internal.setOwner(ddef.symbol, api.currentOwner)
             // change owners of local variables
-            c.internal.changeOwner(newHead, newHead.symbol.owner, ddef.symbol)
             c.internal.changeOwner(rhs, head.symbol, api.currentOwner)
             c.internal.changeOwner(newRhs, api.currentOwner, ddef.symbol)
              // build new defDef
@@ -55,6 +55,7 @@ object cpsParam extends IMTransformer {
         c.typecheck(q"@inline $SYNTHETIC def ${TermName(c.freshName("unit"))} () : ${TypeTree(cont.last.tpe)} = ???") match {
           case ddef@DefDef(_, _, _, _, _, _) =>
             val newRhs = api.recur(api.typecheck(q"{..$cont}"))
+            c.internal.setOwner(ddef.symbol, api.currentOwner)
             // change owners of local variables
             c.internal.changeOwner(newRhs, api.currentOwner, ddef.symbol)
             // build new defDef

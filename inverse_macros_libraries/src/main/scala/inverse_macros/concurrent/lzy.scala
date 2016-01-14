@@ -1,8 +1,8 @@
-package inverse_macros.lazys
+package inverse_macros.concurrent
 
 import inverse_macros.{IMAnnotation, IMTransformer}
 
-class lzy extends IMAnnotation
+class lzy[+MA] extends IMAnnotation
 
 object lzy extends IMTransformer {
 
@@ -14,8 +14,8 @@ object lzy extends IMTransformer {
                                (head: c.Tree, cont: List[c.Tree]): (List[c.Tree], List[c.Tree]) = {
     import c.universe._
 
-    val lcsym = symbolOf[LazyContext[_]]
-    val lzsym = symbolOf[lzy]
+    val lcsym = symbolOf[ConcurrentContext[_]]
+    val lzsym = symbolOf[lzy[_]]
 
 
     def dval(tpe: Type): Tree = c.typecheck(tpe match {
@@ -31,18 +31,20 @@ object lzy extends IMTransformer {
       case _ => q"null : $tpe"
     })
 
+    val mtp = targs.head
+
     head match {
       case ValDef(mods, name, tpt, rhs) =>
         val AnnotatedType(_, underlying) = rhs.tpe
         val intmNme = c.freshName(name.toString)
-        val intmVar = c.typecheck(q"var ${TermName(intmNme + "$var")} : $lcsym[$underlying] = null")
+        val intmVar = c.typecheck(q"var ${TermName(intmNme + "$var")} : $mtp = null")
         c.internal.setOwner(intmVar.symbol, api.currentOwner)
         val newRhs =
-          c.typecheck(q"try { $rhs : $underlying } catch { case c: $lcsym[_] => ${intmVar.symbol} = c.asInstanceOf[$lcsym[$underlying]]; ${dval(underlying)} }")
+          c.typecheck(q"try { $rhs : $underlying } catch { case c: $lcsym[_] => ${intmVar.symbol} = c.m.asInstanceOf[$mtp]; ${dval(underlying)} }")
         val newVal = treeCopy.ValDef(head, mods, name, tpt, newRhs)
         c.internal.changeOwner(newRhs, c.internal.enclosingOwner, head.symbol)
         c.internal.changeOwner(newRhs, api.currentOwner, head.symbol)
-        val intmVal = c.typecheck(q"val ${TermName(intmNme + "$val")} : $lcsym[$underlying] = ${intmVar.symbol}")
+        val intmVal = c.typecheck(q"val ${TermName(intmNme + "$val")} : $mtp = ${intmVar.symbol}")
         c.internal.setOwner(intmVal.symbol, api.currentOwner)
 
         // traverse
@@ -50,7 +52,7 @@ object lzy extends IMTransformer {
           c.internal.transform(t) {
             (tree, api) => tree match {
               case i@Ident(_) if i.symbol == head.symbol =>
-                c.typecheck(q"if (${intmVal.symbol} == null) ${head.symbol} else ${intmVal.symbol}.body()")
+                c.typecheck(q"if (${intmVal.symbol} == null) ${head.symbol} else ${intmVal.symbol}.jget()")
               case _ =>
                 api.default(tree)
             }

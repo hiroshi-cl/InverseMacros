@@ -69,7 +69,25 @@ private[inverse_macros] final class Transformer[C <: scala.reflect.macros.blackb
     else
       tree // do nothing
 
-  def imTransform(tree: Tree) = c.typecheck(typingTransform(tree)(blockTransform))
+  private[inverse_macros] def stripLastReturns(tree: Tree): Tree = {
+    def transformCaseDef(caseDef: CaseDef): CaseDef =
+      treeCopy.CaseDef(caseDef, caseDef.pat, caseDef.guard, stripLastReturns(caseDef.body))
+
+    tree match {
+      case Return(expr) => expr
+      case Block(stats, expr) =>
+        treeCopy.Block(tree, stats, stripLastReturns(expr))
+      case If(cond, thenp, elsep) =>
+        treeCopy.If(tree, cond, stripLastReturns(thenp), stripLastReturns(elsep))
+      case Match(selector, cases) =>
+        treeCopy.Match(tree, selector, cases.map(transformCaseDef))
+      case Try(block, catches, finalizer) =>
+        treeCopy.Try(tree, stripLastReturns(block), catches.map(transformCaseDef), stripLastReturns(finalizer))
+      case _ => tree
+    }
+  }
+
+  def imTransform(tree: Tree) = c.typecheck(typingTransform(stripLastReturns(tree))(blockTransform))
 
   private[inverse_macros] def detectAnnotatedTyped(tree: Tree): Boolean =
     transform(tree) { (t, api) =>
