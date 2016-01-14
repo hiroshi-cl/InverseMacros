@@ -35,26 +35,26 @@ class ANFTransformerTest extends FunSuite {
   implicit def toBoolean(i: Int): Boolean = if (i == 0) false else true
 
   test("simple +") {
-    compare(show(transform(println(intFunc1(10)))))("scala.this.Predef.println(ANFTransformerTest.this.intFunc1(10))")
-    compare(show(transform(println(intFunc2(10)(20)))))("scala.this.Predef.println(ANFTransformerTest.this.intFunc2(10)(20))")
+    compare(show(transform(println(intFunc1(10)))))("scala.Predef.println(ANFTransformerTest.this.intFunc1(10))")
+    compare(show(transform(println(intFunc2(10)(20)))))("scala.Predef.println(ANFTransformerTest.this.intFunc2(10)(20))")
     compare(show(transform(println(intFunc3(10)(20)))))(
-      """scala.this.Predef.println({
+      """scala.Predef.println({
         |  <artifact> val x$1: Int = 10;
         |  <artifact> val x$2: Int = 20;
         |  <artifact> val x$3: Int = ANFTransformerTest.this.intFunc3$default$3(x$1);
         |  ANFTransformerTest.this.intFunc3(x$1)(x$2, x$3)
         |})""".stripMargin)
     compare(show(transform(println(intFunc3(10)(b = 20)))))(
-      """scala.this.Predef.println({
+      """scala.Predef.println({
         |  <artifact> val x$4: Int = 10;
         |  <artifact> val x$5: Int = 20;
         |  <artifact> val x$6: Int = ANFTransformerTest.this.intFunc3$default$3(x$4);
         |  ANFTransformerTest.this.intFunc3(x$4)(x$5, x$6)
         |})""".stripMargin)
-    compare(show(transform(println(intFunc3(10)(20, c = 30)))))("scala.this.Predef.println(ANFTransformerTest.this.intFunc3(10)(20, 30))")
-    compare(show(transform(println("hoge" + 1))))("scala.this.Predef.println(\"hoge\".+(1))")
-    compare(show(transform(println(Math.sqrt(10)))))("scala.this.Predef.println(java.this.lang.Math.sqrt(10.0))")
-    compare(show(transform(println(Array(10)(0)))))("scala.this.Predef.println(scala.Array.apply(10).apply(0))")
+    compare(show(transform(println(intFunc3(10)(20, c = 30)))))("scala.Predef.println(ANFTransformerTest.this.intFunc3(10)(20, 30))")
+    compare(show(transform(println("hoge" + 1))))("scala.Predef.println(\"hoge\".+(1))")
+    compare(show(transform(println(Math.sqrt(10)))))("scala.Predef.println(java.lang.Math.sqrt(10.0))")
+    compare(show(transform(println(Array(10)(0)))))("scala.Predef.println(scala.Array.apply(10).apply(0))")
     compare(show(transform(this.intFunc1(10))))("this.intFunc1(10)")
   }
 
@@ -63,14 +63,14 @@ class ANFTransformerTest extends FunSuite {
       """{
         |  <synthetic> <artifact> val $$: Unit =
         |    ANFTransformerTest.this.intFunc1annot(10);
-        |  scala.this.Predef.println($$)
+        |  scala.Predef.println($$)
         |}""".stripMargin)
 
     compare(show(transform(println(intFunc2annot(10)(20)))))(
       """{
         | <synthetic> <artifact> val $$: Unit =
         |   ANFTransformerTest.this.intFunc2annot(10)(20);
-        | scala.this.Predef.println($$)
+        | scala.Predef.println($$)
         |}""".stripMargin)
 
     compare(show(transform(println(intFunc3annot(10)(20)))))(
@@ -81,7 +81,7 @@ class ANFTransformerTest extends FunSuite {
         |    <artifact> val x$9: Int = ANFTransformerTest.this.intFunc3annot$default$3(x$7);
         |    ANFTransformerTest.this.intFunc3annot(x$7)(x$8, x$9)
         |  };
-        |  scala.this.Predef.println($$)
+        |  scala.Predef.println($$)
         |}""".stripMargin)
 
     compare(show(transform(println(intFunc3annot(10)(b = 20)))))(
@@ -92,13 +92,13 @@ class ANFTransformerTest extends FunSuite {
         |    <artifact> val x$12: Int = ANFTransformerTest.this.intFunc3annot$default$3(x$10);
         |    ANFTransformerTest.this.intFunc3annot(x$10)(x$11, x$12)
         |  };
-        |  scala.this.Predef.println($$)
+        |  scala.Predef.println($$)
         |}""".stripMargin)
 
     compare(show(transform(println(intFunc3annot(10)(20, c = 30)))))(
       """{
         |  <synthetic> <artifact> val $$: Unit = ANFTransformerTest.this.intFunc3annot(10)(20, 30);
-        |  scala.this.Predef.println($$)
+        |  scala.Predef.println($$)
         |}""".stripMargin)
 
     compare(show(transform(println(("hoge": @test1) + 1))))(
@@ -106,19 +106,19 @@ class ANFTransformerTest extends FunSuite {
         |  <synthetic> <artifact> val $$: String("hoge") =
         |    ("hoge": String("hoge") @inverse_macros.test1);
         |  <synthetic> <artifact> val $$: String = $$.+(1);
-        |  scala.this.Predef.println($$)
+        |  scala.Predef.println($$)
         |}""".stripMargin)
 
     compare(show(transform(println(Math.sqrt(10): @test1))))(
       """{
-        |  <synthetic> <artifact> val $$: Double = (java.this.lang.Math.sqrt(10.0): Double @inverse_macros.test1);
-        |  scala.this.Predef.println($$)
+        |  <synthetic> <artifact> val $$: Double = (java.lang.Math.sqrt(10.0): Double @inverse_macros.test1);
+        |  scala.Predef.println($$)
         |}""".stripMargin)
 
     compare(show(transform(println(Array(10)(0): @test1))))(
       """{
         |  <synthetic> <artifact> val $$: Int = (scala.Array.apply(10).apply(0): Int @inverse_macros.test1);
-        |  scala.this.Predef.println($$)
+        |  scala.Predef.println($$)
         |}""".stripMargin)
 
     compare(show(transform(this.intFunc1annot(10))))("this.intFunc1annot(10)")
@@ -131,8 +131,8 @@ class ANFTransformerTest extends FunSuite {
       println("hoge" + 1)
     }))(
         """{
-          |  scala.this.Predef.println(java.this.lang.Math.sqrt(10.0));
-          |  scala.this.Predef.println("hoge".+(1))
+          |  scala.Predef.println(java.lang.Math.sqrt(10.0));
+          |  scala.Predef.println("hoge".+(1))
           |}""".stripMargin)
 
     compare(show(transform {
@@ -152,7 +152,7 @@ class ANFTransformerTest extends FunSuite {
     }))(
         """{
           |  val a: String = "piyo";
-          |  scala.this.Predef.println(a)
+          |  scala.Predef.println(a)
           |}""".stripMargin)
 
     compare(show(transform {
@@ -175,7 +175,7 @@ class ANFTransformerTest extends FunSuite {
            |    val a: Int = 10;
            |    a.+(20)
            |  }.+(30);
-           |  scala.this.Predef.println(a);
+           |  scala.Predef.println(a);
            |  a
            |}""".stripMargin)
 
@@ -194,7 +194,7 @@ class ANFTransformerTest extends FunSuite {
           |    val a: Int = 10;
           |    a.+(20)
           |  }.+(30);
-          |  scala.this.Predef.println(a);
+          |  scala.Predef.println(a);
           |  a
           |}""".stripMargin)
   }
@@ -257,7 +257,7 @@ class ANFTransformerTest extends FunSuite {
       """{
         |  <synthetic> <artifact> val $$: Option[Int] =
         |    scala.None.asInstanceOf[Option[Int] @inverse_macros.test1];
-        |  scala.this.Predef.println($$)
+        |  scala.Predef.println($$)
         |}""".stripMargin)
   }
 

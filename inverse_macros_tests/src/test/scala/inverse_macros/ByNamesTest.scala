@@ -134,7 +134,7 @@ class ByNamesTest extends FunSuite {
       """{
         |  val func: Int => Int @inverse_macros.test1 = ((a: Int) => ByNamesTest.this.intAnnot);
         |  <synthetic> <artifact> val $$: Int = func.apply(ByNamesTest.this.int);
-        |  scala.this.Predef.println($$)
+        |  scala.Predef.println($$)
         |}""".stripMargin
     )
 
@@ -147,7 +147,7 @@ class ByNamesTest extends FunSuite {
       """{
         |  val func: Int => Unit = ((a: Int) => {
         |     <synthetic> <artifact> val $$: Int = ByNamesTest.this.intAnnot;
-        |     scala.this.Predef.println($$)
+        |     scala.Predef.println($$)
         |  });
         |  func.apply(ByNamesTest.this.int)
         |}""".stripMargin
@@ -159,7 +159,7 @@ class ByNamesTest extends FunSuite {
         """{
           |  <synthetic> <artifact> val $$: Int => Int @inverse_macros.test1 =
           |    ((a: Int) => ByNamesTest.this.intAnnot);
-          |  scala.this.Predef.println($$)
+          |  scala.Predef.println($$)
           |}""".stripMargin
       )
   }

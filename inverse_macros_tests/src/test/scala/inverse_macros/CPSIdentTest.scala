@@ -37,7 +37,7 @@ class CPSIdentTest extends FunSuite {
       """{
         |  @inline <synthetic> def $$($$: Unit): Unit = {
         |    <synthetic> <artifact> val $$: Unit = $$;
-        |    scala.this.Predef.println($$)
+        |    scala.Predef.println($$)
         |  };
         |  $$(CPSIdentTest.this.intFunc1annot(10))
         |}""".stripMargin)
@@ -46,7 +46,7 @@ class CPSIdentTest extends FunSuite {
       """{
         |  @inline <synthetic> def $$($$: Unit): Unit = {
         |    <synthetic> <artifact> val $$: Unit = $$;
-        |    scala.this.Predef.println($$)
+        |    scala.Predef.println($$)
         |  };
         |  $$(CPSIdentTest.this.intFunc2annot(10)(20))
         |}""".stripMargin)
@@ -55,7 +55,7 @@ class CPSIdentTest extends FunSuite {
       """{
         |  @inline <synthetic> def $$($$: Unit): Unit = {
         |    <synthetic> <artifact> val $$: Unit = $$;
-        |    scala.this.Predef.println($$)
+        |    scala.Predef.println($$)
         |  };
         |  $$({
         |    <artifact> val x$1: Int = 10;
@@ -69,7 +69,7 @@ class CPSIdentTest extends FunSuite {
       """{
         |  @inline <synthetic> def $$($$: Unit): Unit = {
         |    <synthetic> <artifact> val $$: Unit = $$;
-        |    scala.this.Predef.println($$)
+        |    scala.Predef.println($$)
         |  };
         |  $$({
         |    <artifact> val x$4: Int = 10;
@@ -83,7 +83,7 @@ class CPSIdentTest extends FunSuite {
       """{
         |  @inline <synthetic> def $$($$: Unit): Unit = {
         |    <synthetic> <artifact> val $$: Unit = $$;
-        |    scala.this.Predef.println($$)
+        |    scala.Predef.println($$)
         |  };
         |  $$(CPSIdentTest.this.intFunc3annot(10)(20, 30))
         |}""".stripMargin)
@@ -93,7 +93,7 @@ class CPSIdentTest extends FunSuite {
         |  @inline <synthetic> def $$($$: String("hoge")): Unit = {
         |    <synthetic> <artifact> val $$: String("hoge") = $$;
         |    <synthetic> <artifact> val $$: String = $$.+(1);
-        |    scala.this.Predef.println($$)
+        |    scala.Predef.println($$)
         |  };
         |  $$(("hoge": String("hoge") @inverse_macros.cpsIdent))
         |}""".stripMargin)
@@ -102,16 +102,16 @@ class CPSIdentTest extends FunSuite {
       """{
         |  @inline <synthetic> def $$($$: Double): Unit = {
         |    <synthetic> <artifact> val $$: Double = $$;
-        |    scala.this.Predef.println($$)
+        |    scala.Predef.println($$)
         |  };
-        |  $$((java.this.lang.Math.sqrt(10.0): Double @inverse_macros.cpsIdent))
+        |  $$((java.lang.Math.sqrt(10.0): Double @inverse_macros.cpsIdent))
         |}""".stripMargin)
 
     compare(show(transform(println(Array(10)(0): @cpsIdent))))(
       """{
         |  @inline <synthetic> def $$($$: Int): Unit = {
         |    <synthetic> <artifact> val $$: Int = $$;
-        |    scala.this.Predef.println($$)
+        |    scala.Predef.println($$)
         |  };
         |  $$((scala.Array.apply(10).apply(0): Int @inverse_macros.cpsIdent))
         |}""".stripMargin)
@@ -125,7 +125,7 @@ class CPSIdentTest extends FunSuite {
         """{
           |  @inline <synthetic> def $$($$: Unit): Unit @inverse_macros.cpsIdent = {
           |    <synthetic> <artifact> val $$: Unit = $$;
-          |    scala.this.Predef.println($$);
+          |    scala.Predef.println($$);
           |    CPSIdentTest.this.intFunc1annot(20)
           |  };
           |  $$(CPSIdentTest.this.intFunc1annot(10))
