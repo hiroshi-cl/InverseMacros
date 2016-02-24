@@ -49,7 +49,7 @@ object monad extends IMTransformer {
 
             def fun_call(pure: Tree)(impure: Tree => Tree) = {
               val (pureTp, ann) = decomposeAnn(api.typecheck(q"${func.symbol} ($pure)").tpe)
-              val impureTp = intersectionType(api.typecheck(impure(q"???")).tpe :: ann)
+              val impureTp = intersectionType(decomposeAnn(api.typecheck(impure(q"???")).tpe)._2 ++ ann)
               val ex = TermName(c.freshName(ddef.name + "$" + "ex"))
               val tp = c.typecheck(tq"$pureTp@$cpsym[$impureTp]", mode = c.TYPEmode)
               q"${func.symbol} (try {$pure} catch { case $ex: $ccsym[_] => throw new $ccsym(${impure(q"$ex.m")}) }): $tp"
@@ -81,7 +81,7 @@ object monad extends IMTransformer {
 
             def fun_call(pure: Tree)(impure: Tree => Tree) = {
               val (pureTp, ann) = decomposeAnn(api.typecheck(q"${func.symbol}").tpe)
-              val impureTp = intersectionType(api.typecheck(impure(q"???")).tpe :: ann)
+              val impureTp = intersectionType(decomposeAnn(api.typecheck(impure(q"???")).tpe)._2 ++ ann)
               val ex = TermName(c.freshName(ddef.name + "$" + "ex"))
               val tp = c.typecheck(tq"$pureTp@$cpsym[$impureTp]", mode = c.TYPEmode)
               List(
